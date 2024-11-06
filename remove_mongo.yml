@@ -1,0 +1,39 @@
+---
+
+- hosts: all
+  become: true
+  tasks:
+
+  - name: update repository index
+    apt:
+      update_cache: yes
+
+  - name: Stop All Mongod Services
+    service: name=mongod state=stopped enabled=false
+
+  - name: uninstall Mongo
+    apt:
+      name: mongodb-org
+      state: absent
+  
+  - name: Remove Config File
+    command: rm /etc/mongod.conf
+
+  - name: Remove Data Files
+    command: rm -rf {{dbpath}}
+
+  - name: Remove Logs
+    command: rm -rf {{logpath}}
+
+- hosts: sharddb_servers
+  become: true
+  tasks:
+
+  - name: Stop All Mongod Services
+    service: name=mongos state=stopped enabled=false
+
+  - name: Remove Mongos config
+    command: rm /etc/mongosrouter.conf
+
+  - name: Remove mongos.service
+    command: rm /etc/systemd/system/mongos.service

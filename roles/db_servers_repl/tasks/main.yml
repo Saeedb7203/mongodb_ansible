@@ -1,0 +1,46 @@
+# - name: Print all available facts
+#   ansible.builtin.debug:
+#     var: ansible_facts
+
+############Copy Config File To server##########
+
+- name: configuration mongo
+  tags: mongo,auth,key
+  template:
+    src: config.j2
+    dest: /etc/mongod.conf
+
+############Start Mongo server##########
+
+- name: start mongo server
+  service: name=mongod state=restarted enabled=true
+
+# - name: add replicas
+#   community.mongodb.mongodb_shell:
+#     login_host: "{{ ansible_host }}"
+#     login_port: "{{ server_port }}"
+#     db: "admin"
+#     eval: "rs.initiate( { _id: \"{{replsetname}}\", members: [ { _id: 0, host: \"172.16.2.135:{{ server_port }}\" }, { _id: 1, host: \"172.16.2.136:{{ server_port }}\" }, { _id: 2, host: \"172.16.2.137:{{ server_port }}\" }] } )"
+#   when: inventory_hostname == groups['repdb_servers'][0]
+
+
+
+
+############Set replica cluster for each Cluster##########
+
+
+- name: Ensure replicaset exists
+  vars:
+    replsetname: "{{ inventory_hostname.split('_')[0] }}" 
+    replica_members: |
+      [
+        {% for host in groups[replsetname] %}
+          { "host": "{{ hostvars[host].ansible_host }}:{{ server_port }}" }{% if not loop.last %},{% endif %}
+        {% endfor %}
+      ]
+  community.mongodb.mongodb_replicaset:
+    login_host: "{{ ansible_host }}"
+    login_port: "{{ server_port }}"
+    replica_set: "{{replsetname}}"
+    members:  "{{ replica_members }}"
+  when: inventory_hostname in groups[replsetname][0]

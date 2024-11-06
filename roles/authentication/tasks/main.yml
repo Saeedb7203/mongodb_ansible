@@ -1,0 +1,58 @@
+- name: start  authentication configsvr
+  command: echo "please wait some seconds"
+
+- name: Wait for seconds
+  ansible.builtin.pause:
+    seconds: 10
+
+- name: copy keyfile to authorization
+  tags: mongo,auth,key
+  copy:
+    src: files/key
+    dest: /var/lib/mongodb/keyfile
+    owner: mongodb
+    group: mongodb
+    mode: '400'
+
+- name: change security mode in config file
+  lineinfile:
+    path: /etc/mongod.conf
+    regexp: '^#security:'
+    line: "security:"
+
+- name: change authorization mode in config file
+  lineinfile:
+    path: /etc/mongod.conf
+    regexp: '^#\s*authorization: \"disabled\"'
+    line: "  authorization: \"enabled\""
+
+- name: add keyFile to config file
+  lineinfile:
+    path: /etc/mongod.conf
+    regexp: '^#\s*keyFile: /var/lib/mongodb/keyfile'
+    line: "  keyFile: /var/lib/mongodb/keyfile"
+
+
+- name: create super user for mongo
+  community.mongodb.mongodb_shell:
+    login_host: "{{ ansible_host }}"
+    login_port: "{{ server_port }}"
+    db: "admin"
+    eval: "db.createUser( { user: \"superuser\", pwd: \"{{superuser_pass}}\", roles: [ { role: \"userAdminAnyDatabase\", db: \"admin\" }, { role: \"readWriteAnyDatabase\", db: \"admin\" }] } )"
+  ignore_errors: yes
+
+
+- name: create root user for mongo
+  community.mongodb.mongodb_shell:
+    login_host: "{{ ansible_host }}"
+    login_port: "{{ server_port }}"
+
+    db: "admin"
+    eval: "db.createUser( { user: \"{{rootuser}}\", pwd: \"{{rootpass}}\", roles: [ { role: \"root\", db: \"admin\" }] } )"
+  ignore_errors: yes
+
+
+
+- name: start mongo server
+  service: name=mongod state=restarted enabled=true
+  ignore_errors: yes

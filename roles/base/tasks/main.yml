@@ -1,14 +1,38 @@
-- name: add ssh key for simone
-  authorized_key:
-    user: simone
-    key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDDFKXMIafzQFacLs0RyQoeTvjFrtR4R2FIlOsvQXOfg ansible"
+- name: install curl
+  tags: curl,ubuntu
+  apt:
+    name:
+    - curl
+    - gnupg
+    state: latest
+  when: ansible_distribution == "Ubuntu"
 
-- name: generate sshd_config file from template
-  tags: ssh
-  template:
-    src: "{{ ssh_template_file }}"
-    dest: /etc/ssh/sshd_config
-    owner: root
-    group: root
-    mode: 0644
-  notify: restart_sshd
+- name: Curl Package
+  tags: curl,mongo.ubuntu
+  shell: curl -fsSL https://www.mongodb.org/static/pgp/server-8.0.asc | gpg --dearmor -o /usr/share/keyrings/mongodb-server-8.0.gpg 
+
+
+- name: Create the list file
+  shell: echo "deb [ signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] http://repo.mongodb.org/apt/debian bookworm/mongodb-org/8.0 main" | tee /etc/apt/sources.list.d/mongodb-org-8.0.list
+
+- name: update repository index (Ubuntu)
+  tags: always
+  apt:
+    update_cache: yes
+  changed_when: false
+  when: ansible_distribution == "Ubuntu"
+
+- name: install mongodb-org
+  apt:
+    name: mongodb-org
+
+- name: start mongo server
+  service: name=mongod state=started enabled=true daemon_reload=true
+- name: install pip
+  apt:
+    name: pip
+- name: install pymongo
+  ansible.builtin.pip:
+    name: pymongo
+
+

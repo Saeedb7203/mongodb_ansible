@@ -1,0 +1,20 @@
+# replsetname: rs0
+# bindip: "{{ ansible_facts['default_ipv4']['address'] }}"
+# server_port: 27017
+# dbpath: /var/lib/mongodb
+# logpath: /var/log/mongodb/mongod.log
+# shardmode: shardsvr
+# root_user_pass: saeed
+# superuser_pass: saeed
+# authenticationMechanisms: SCRAM-SHA-256
+
+country: US
+state: Massachusetts
+locality: Bedford
+organization: Personal
+organizational_unit: Personal
+email: example@rs0.com
+common_name: rs1_2
+san_dns:
+  - localhost
+  - "{{ ansible_facts['default_ipv4']['address'] }}"

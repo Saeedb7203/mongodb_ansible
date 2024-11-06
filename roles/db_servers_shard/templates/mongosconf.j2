@@ -1,0 +1,12 @@
+sharding:
+  configDB: {{confreplsetname}}/{{ bindip }}:{{ server_port }}
+net:
+  bindIp: {{ bindip }}
+  port: {{ mongosport }}
+systemLog:
+  destination: file
+  path: {{ mongoslog }}
+  logAppend: true
+#security:
+#  authorization: "disabled"
+#  keyFile: /var/lib/mongodb/keyfile

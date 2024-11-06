@@ -1,0 +1,36 @@
+- name: copy pem file
+  copy:
+    src: "{{ playbook_dir }}/roles/tls/files/mongodb.pem"
+    dest: /etc/ssl/mongodb.pem
+
+- name: copy crt file
+  copy:
+    src: "{{ playbook_dir }}/roles/tls/files/mongodb-cert.crt"
+    dest: /etc/ssl/mongodb-cert.crt
+
+- name: change tls config
+  lineinfile:
+    path: /etc/mongod.conf
+    regexp: '^#\s*tls:'
+    line: "  tls:"
+
+- name: change tls mode config
+  lineinfile:
+    path: /etc/mongod.conf
+    regexp: '^#\s*mode:'
+    line: "    mode: {{tls_mode}}"
+
+- name: change tls config
+  lineinfile:
+    path: /etc/mongod.conf
+    regexp: '^#\s*certificateKeyFile:'
+    line: "    certificateKeyFile: /etc/ssl/mongodb.pem"
+
+- name: change tls config
+  lineinfile:
+    path: /etc/mongod.conf
+    regexp: '^#\s*CAFile:'
+    line: "    CAFile: /etc/ssl/mongodb-cert.crt"
+
+- name: start mongo server
+  service: name=mongod state=restarted enabled=true

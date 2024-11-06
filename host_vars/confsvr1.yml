@@ -1,0 +1,12 @@
+confreplsetname: rsc1
+replsetname: rs0
+sharddb_port: 27018   #this is server port on replica nodes
+server_port: 27017
+dbpath: /var/lib/mongodb
+logpath: /var/log/mongodb/mongod.log
+mongosport: 27019
+bindip: "{{ ansible_facts['default_ipv4']['address'] }}"
+shardmode: configsvr
+mongoslog: /var/log/mongodb/mongos.log
+root_user_pass: saeed
+superuser_pass: saeed

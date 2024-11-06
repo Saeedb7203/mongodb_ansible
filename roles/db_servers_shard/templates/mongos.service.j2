@@ -1,0 +1,14 @@
+[Unit]
+Description=MongoDB Shard Router (mongos)
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/mongos -config /etc/mongosrouter.conf  --logpath /var/log/mongodb/mongos.log --fork
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+Restart=on-failure
+User=mongodb
+Group=mongodb
+
+[Install]
+WantedBy=multi-user.target

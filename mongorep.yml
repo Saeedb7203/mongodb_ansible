@@ -1,0 +1,130 @@
+---
+##############Update All servers##############
+
+
+
+# - hosts: all
+#   become: true
+#   pre_tasks:
+#   - name: update repository index (Ubuntu)
+#     tags: always
+#     apt:
+#       update_cache: yes
+#     changed_when: false
+#     when: ansible_distribution == "Ubuntu"
+
+##############Create keyfile and Copy to servers##############
+
+
+# - hosts: workstations
+#   vars_prompt:
+#   - name: "work_pass"
+#     prompt: "Please enter the password for the workstation"
+#     private: yes
+#   tasks:
+#   - name: create keyfile
+#     ansible.builtin.shell: "openssl rand -base64 756 >{{ playbook_dir }}/roles/authentication/files/key"
+#     args:
+#       creates: "{{ playbook_dir }}/roles/authentication/files/key"  
+
+
+
+##############Install mongo on all servers##############
+
+
+# - hosts: all
+#   become: true
+#   roles:
+#     - base
+
+
+
+##############Set proxy on All Servers##############
+
+# - hosts: rs2
+#   vars_prompt:
+#   - name: "proxy"
+#     prompt: "Please enter proxy server"
+#     private: no
+#   tasks:    
+#     - package: name=cobbler state=present
+#       environment:
+#         http_proxy: "{{ proxy }}"
+
+
+##############config MongoDB Replica Cluster##############
+
+- hosts: all
+  become: true
+  vars:
+    exclude_groups:
+      - workstations
+  vars_prompt:
+  - name: "work_pass"
+    prompt: "Please enter the port for the workstation"
+    private: yes
+  - name: "server_port"
+    prompt: "Please enter the port for the Mongo Server"
+    private: no
+    default: 27017
+  tasks:
+  - name: Run config replica cluster
+    include_role: 
+      name: db_servers_repl
+    when: "exclude_groups | intersect(group_names) | length == 0"
+
+
+# ##############Enable authentication MongoDB Replica Cluster##############
+
+
+- hosts: all
+  become: true
+  vars:
+    exclude_groups:
+      - workstations
+  vars_prompt:
+  - name: "work_pass"
+    prompt: "Please enter the port for the workstation"
+    private: yes
+  - name: "rootuser"
+    prompt: "Please enter the rootuser username"
+    private: no 
+    default: root
+  - name: "rootpass"
+    prompt: "Please enter the rootuser password"
+    private: yes 
+    default: rootpass
+  tasks:
+    - name: Run config authintication
+      include_role:
+        name: authentication
+      when: "exclude_groups | intersect(group_names) | length == 0"
+
+
+
+# - name: configuration tls
+#   hosts: all
+#   become: true
+#   vars:
+#     exclude_groups:
+#       - workstations
+#   vars_prompt:
+#   - name: "work_pass"
+#     prompt: "Please enter the password for the workstation"
+#     private: yes
+#   - name: "tls_mode"
+#     prompt: "Please enter the tls mode for the Mongo Server"
+#     private: no
+#     default: requireTLS
+#   tasks:
+#     - name: Run setup tasks from tls
+#       include_role:
+#         name: tls
+#         tasks_from: createcert
+#       when: "'workstations' in group_names"
+#     - name: Run configure tasks from tls
+#       include_role:
+#         name: tls
+#         tasks_from: config
+#       when: "exclude_groups | intersect(group_names) | length == 0"
+

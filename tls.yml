@@ -1,0 +1,9 @@
+---
+- name: Generate TLS files with SAN for MongoDB from multiple groups
+  hosts: workstations
+  vars_prompt:
+  - name: "work_pass"
+    prompt: "Please enter the port for the workstation"
+    private: yes
+  roles:
+  - tls

@@ -1,12 +1,19 @@
-[web_servers]
-172.16.250.132
-172.16.250.248
+[rs0]
+rs0_0 ansible_host=172.16.2.135
+rs0_1 ansible_host=172.16.2.136
+rs0_2 ansible_host=172.16.2.137
 
-[db_servers]
-172.16.250.133
 
-[file_servers]
-172.16.250.134
+[rs1]
+rs1_0 ansible_host=172.16.2.139
+rs1_1 ansible_host=172.16.2.140
+rs1_2 ansible_host=172.16.2.141
+
+
+[rs2]
+rs2_0 ansible_host=172.16.2.142
+
 
 [workstations]
-172.16.250.135
+workstation1 ansible_host=10.20.32.59 ansible_user=saeed ansible_become_pass={{work_pass}}
+ 

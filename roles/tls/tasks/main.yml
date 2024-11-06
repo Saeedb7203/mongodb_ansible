@@ -1,0 +1,41 @@
+
+# - name: Initialize an empty set for unique SANs
+#   set_fact:
+#     unique_sans: []
+
+# - name: Gather all unique SANs from inventory
+#   set_fact:
+#     unique_sans: "{{ unique_sans | union([hostvars[item].ansible_host]) }}"
+#   loop: "{{ groups.keys() | select('match', '^rs') | map('extract', groups) | flatten | unique }}"
+#   args:
+#     creates: "{{ playbook_dir }}/files/openssl.cnf"  
+# - name: Debug unique SANs collected
+#   debug:
+#     msg: "Unique SANs collected: {{ unique_sans }}"
+
+# - name: Create OpenSSL configuration file from template
+#   template:
+#     src: openssl.j2
+#     dest: "{{ playbook_dir }}/files/openssl.cnf"
+
+
+# - name: Make PEM containig a public key certificate and its associated private key
+#   shell: openssl req -newkey rsa:2048 -new -x509 -days 3650 -nodes -out {{ playbook_dir }}/roles/tls/files/mongodb-cert.crt -keyout {{ playbook_dir }}/roles/tls/files/mongodb-cert.key -config {{ playbook_dir }}/files/openssl.cnf
+#   args:
+#     creates: 
+#     - "{{ playbook_dir }}/roles/tls/files/mongodb-cert.key "
+#     - "{{ playbook_dir }}/roles/tls/files/mongodb-cert.crt"
+# - name: cat mongodb-cert.key to ca
+#   shell: cat {{ playbook_dir }}/roles/tls/files/mongodb-cert.key {{ playbook_dir }}/roles/tls/files/mongodb-cert.crt > {{ playbook_dir }}/roles/tls/files/mongodb.pem
+#   args:
+#     creates: "{{ playbook_dir }}/roles/tls/files/mongodb.pem"  
+
+# roles/my_role/tasks/main.yml
+
+- name: Include setup tasks
+  include_tasks: createcert.yml
+  when: run_setup | default(true)
+
+- name: Include configure tasks
+  include_tasks: config.yml
+  when: run_configure | default(true)

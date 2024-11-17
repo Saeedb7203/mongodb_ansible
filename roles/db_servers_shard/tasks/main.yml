@@ -2,53 +2,53 @@
 #   ansible.builtin.debug:
 #     var: ansible_facts
 
-- name: configuration mongo
-  tags: mongo,auth,key
-  template:
-    src: config.j2
-    dest: /etc/mongod.conf
+# - name: configuration mongo
+#   tags: mongo,auth,key
+#   template:
+#     src: config.j2
+#     dest: /etc/mongod.conf
 
-- name: configuration mongosrouter
-  tags: mongo,auth,key
-  template:
-    src: mongosconf.j2
-    dest: /etc/mongosrouter.conf
-
-
-- name: change cluster servermode
-  lineinfile:
-    path: /etc/mongod.conf
-    regexp: '^#sharding:'
-    line: "sharding:"
-- name: add shard to cluster servermode
-  lineinfile:
-    path: /etc/mongod.conf
-    regexp: '^#\s*clusterRole:'
-    line: "  clusterRole: {{ shardmode }}"
-- name: start mongo server
-  service: name=mongod state=restarted enabled=true
+# - name: configuration mongosrouter
+#   tags: mongo,auth,key
+#   template:
+#     src: mongosconf.j2
+#     dest: /etc/mongosrouter.conf
 
 
-- name: configuration mongos.service
-  tags: mongo,auth,key
-  template:
-    src: mongos.service.j2
-    dest: /etc/systemd/system/mongos.service
+# - name: change cluster servermode
+#   lineinfile:
+#     path: /etc/mongod.conf
+#     regexp: '^#sharding:'
+#     line: "sharding:"
+# - name: add shard to cluster servermode
+#   lineinfile:
+#     path: /etc/mongod.conf
+#     regexp: '^#\s*clusterRole:'
+#     line: "  clusterRole: {{ shardmode }}"
+# - name: start mongo server
+#   service: name=mongod state=restarted enabled=true
 
-- name: start mongo server
-  service: name=mongos state=started enabled=true daemon_reload=true
 
-- name: Wait for seconds
-  ansible.builtin.pause:
-    seconds: 3
+# - name: configuration mongos.service
+#   tags: mongo,auth,key
+#   template:
+#     src: mongos.service.j2
+#     dest: /etc/systemd/system/mongos.service
+
+# - name: start mongo server
+#   service: name=mongos state=started enabled=true daemon_reload=true
+
+# - name: Wait for seconds
+#   ansible.builtin.pause:
+#     seconds: 3
 
 
-- name: add replicas to servers
-  community.mongodb.mongodb_shell:
-    login_host: "{{ ansible_host }}"
-    login_port: "{{ server_port }}"
-    db: "admin"
-    eval: "rs.initiate( { _id: \"{{confreplsetname }}\",  configsvr: true,members: [ { _id: 0, host: \"{{ bindip }}:{{ server_port }}\" } ] } )"
+# - name: add replicas to servers
+#   community.mongodb.mongodb_shell:
+#     login_host: "{{ ansible_host }}"
+#     login_port: "{{ server_port }}"
+#     db: "admin"
+#     eval: "rs.initiate( { _id: \"{{confreplsetname }}\",  configsvr: true,members: [ { _id: 0, host: \"{{ bindip }}:{{ server_port }}\" } ] } )"
 
 # - name: Ensure replicaset exists(shard)
 #   vars:
@@ -67,9 +67,9 @@
 
 
 
-- name: Wait for seconds
-  ansible.builtin.pause:
-    seconds: 3
+# - name: Wait for seconds
+#   ansible.builtin.pause:
+#     seconds: 3
 
 # - name: add shard nodes
 #   community.mongodb.mongodb_shell:
@@ -79,12 +79,73 @@
 #     eval: "sh.addShard(\"{{replsetname}}/172.16.2.135:{{sharddb_port}},172.16.2.136:{{sharddb_port}},172.16.2.137:{{sharddb_port}}\")"
 
 
-- name: Add a replicaset shard
-  vars:
-    shard_members: "{{ groups['repdb_servers'] | map('extract', hostvars, 'ansible_host') | map('regex_replace', '(.*)', '\\1:' ~ mongo_port) | list }}"
-    shard_connection_string: "{{replsetname}}/{{ shard_members | join(',') }}"
-  community.mongodb.mongodb_shard:
-    login_host: "{{ ansible_host }}"
-    login_port: "{{ mongosport }}"
-    shard:  "{{ shard_connection_string }}"
-    state: present
+# - name: Add a replicaset shard
+#   vars:
+#     shard_groups: "{{ groups.keys() | select('match', '^rs.*') | list }}"
+# - name: configuration mongo
+#   tags: mongo,auth,key
+#   template:
+#     src: config.j2
+#     dest: /etc/mongod.conf
+
+# ############Start Mongo server##########
+
+# - name: start mongo server
+#   service: name=mongod state=restarted enabled=true
+
+# - name: Ensure replicaset exists for configsvr
+#   vars:
+#     replsetname: "{{ inventory_hostname.split('_')[0] }}" 
+#     replica_members: |
+#       [
+#         {% for host in groups[replsetname] %}
+#           { "host": "{{ hostvars[host].ansible_host }}:{{ configsvr_port }}" }{% if not loop.last %},{% endif %}
+#         {% endfor %}
+#       ]
+#   community.mongodb.mongodb_shell:
+#     login_host: "{{ ansible_host }}"
+#     login_port: "{{ configsvr_port }}"
+#     db: "admin"
+#     eval: "rs.initiate( { _id: \"{{replsetname }}\",  configsvr: true,members: [ { _id: 0,{{ replica_members }}\" } ] } )"
+#   # community.mongodb.mongodb_replicaset:
+#   #   login_host: "{{ ansible_host }}"
+#   #   login_port: "{{ server_port }}"
+#   #   replica_set: "{{replsetname}}"
+#   #   members:  "{{ replica_members }}"
+#   when: inventory_hostname in groups[replsetname][0]
+
+
+# - name: Create shard server list
+#   set_fact:
+#     shard_servers: >-
+#       {%- set servers = [] -%}
+#       {%- for group in shard_groups -%}
+#       {%- set shard = group + '/' + (groups[group] | map('regex_replace', '^(.+)$', '\\1:' ~ server_port) | join(',')) -%}
+#       {%- do servers.append(shard) -%}
+#       {%- endfor -%}
+#           {{ servers }}
+# - name: Add shards to MongoDB cluster
+#   community.mongodb.mongodb_shard:
+#     login_host: "{{ ansible_host }}"
+#     login_port: "{{ mongosport }}"
+#     shard:  "{{ item }}"
+#     state: present
+#   loop: "{{ shard_servers }}"
+
+# - name: Add shards from inventory groups dynamically
+#   community.mongodb.mongodb_shard:
+#     replica_set: "{{ item }}"
+#     members: "{{ groups[item] | map('rs', '(.*)', '\\1:shardsvr_port') | list }}"
+#     state: present
+#     login_user: admin        # Optional if authentication is enabled
+#     login_password: password # Optional if authentication is enabled
+#     login_database: admin    # Optional if authentication is enabled
+#   with_items: "{{ groups.keys() | select('match', '^shard') | list }}"
+
+- name: Include shardsvr tasks
+  include_tasks: shardsvr.yml
+  when: shardsvr | default(true)
+
+- name: Include configsvr tasks
+  include_tasks: configsvr.yml
+  when: configsvr | default(true)

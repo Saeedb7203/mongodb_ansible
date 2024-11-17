@@ -1,0 +1,87 @@
+# # - name: Create the role that allows any action on any resource.
+# #   community.mongodb.mongodb_shell:
+# #     login_host: "{{ ansible_host }}"
+# #     login_port: "{{ server_port }}"
+# #     login_user: "{{rootuser}}"
+# #     login_password: "{{rootpass}}"
+# #     db: "admin"
+# #     eval: "db.createRole({ \"role\": \"pbmAnyAction\",\"privileges\": [{ \"resource\": { \"anyResource\": true },\"actions\": [ \"anyAction\" ]}],\"roles\": []})"
+# #   ignore_errors: yes
+
+
+# # - name: Create the user and assign the role you created to it.
+# #   community.mongodb.mongodb_shell:
+# #     login_host: "{{ ansible_host }}"
+# #     login_port: "{{ server_port }}"
+# #     login_user: "{{rootuser}}"
+# #     login_password: "{{rootpass}}"
+# #     db: "admin"
+# #     eval: "db.createUser({user: \"{{pbmuser}}\",\"pwd\": \"{{pbmpass}}\",\"roles\" : [{ \"db\":\"admin\", \"role\":\"readWrite\",\"collection\":\"\" },{ \"db\":\"admin\", \"role\":\"backup\" },{ \"db\":\"admin\", \"role\":\"clusterMonitor\" },{ \"db\":\"admin\", \"role\":\"restore\" },{ \"db\":\"admin\", \"role\":\"pbmAnyAction\" }]})"
+# #   ignore_errors: yes
+
+
+# - name: "region"
+#   ansible.builtin.pause:
+#     prompt: "Enter the region for pbm-s3 (only for s3):"
+#   register: region
+#   when: config_choice == '1'
+# - name: "bucket"
+#   ansible.builtin.pause:
+#     prompt: "Enter the s3 bucket for pbm-s3 (only for s3):"
+#   register: region
+#   when: config_choice == '1'
+# - name: "prefix"
+#   ansible.builtin.pause:
+#     prompt: "Enter the s3 prefix for pbm-s3 (only for s3):"
+#   register: region
+#   when: config_choice == '1'
+# - name: "access_key"
+#   ansible.builtin.pause:
+#     prompt: "Enter the s3 access_key for pbm-s3 (only for s3):"
+#   register: region
+#   when: config_choice == '1'
+# - name: "secret_key"
+#   ansible.builtin.pause:
+#     prompt: "Enter the s3 secret_key for pbm-s3 (only for s3):"
+#   register: secret_key
+#   when: config_choice == '1'
+# - name: "backup_path"
+#   ansible.builtin.pause:
+#     prompt: "Enter the local backup_path for pbm-s3 (only for locals torage):"
+#   register: backup_path
+#   when: config_choice == '2'
+
+# - name: Set Facts
+#   set_fact:
+#     backup_path: "{{ backup_path.user_input }}"
+#   when: backup_path_input is defined
+  
+# - name: config pbm-agent
+#   ansible.builtin.copy:
+#     src: "{{ config_file_path }}"
+#     dest: "/etc/pbm-storage.conf"
+#     # owner: preserve
+#     # group: preserve
+#     # mode: preserve
+#     # force: yes
+
+# - name: Set Facts
+#   set_fact:
+#     backup_path: "{{ backup_path.user_input }}"
+#   when: backup_path_input is defined
+
+# - name: Debug the backup path
+#   ansible.builtin.debug:
+#     msg: "The backup path is: {{ backup_path }}"
+#   when: backup_path is defined
+
+
+
+
+- name: Include s3 tasks
+  include_tasks: s3.yml
+  when: run_s3 | default(true)
+
+- name: Include local storage tasks
+  include_tasks: local.yml
+  when: run_local | default(true)

@@ -10,8 +10,8 @@
   copy:
     src: files/key
     dest: /var/lib/mongodb/keyfile
-    owner: mongodb
-    group: mongodb
+    owner: mongod
+    group: mongod
     mode: '400'
 
 - name: change security mode in config file

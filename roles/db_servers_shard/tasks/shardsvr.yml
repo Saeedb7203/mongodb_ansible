@@ -1,0 +1,42 @@
+- name: configuration mongo
+  tags: mongo,auth,key
+  template:
+    src: config.j2
+    dest: /etc/mongod.conf
+
+
+- name: change servermode
+  lineinfile:
+    path: /etc/mongod.conf
+    regexp: '^#sharding:'
+    line: "sharding:"
+  when: exclude_groups | difference([target_group])| intersect(group_names) | length == 0
+
+- name: add shardsvr to replicas node
+  lineinfile:
+    path: /etc/mongod.conf
+    regexp: '^#\s*clusterRole:'
+    line: "  clusterRole: shardsvr"
+  when: exclude_groups | intersect(group_names) | length == 0
+
+
+############Start Mongo server##########
+
+- name: start mongo server
+  service: name=mongod state=restarted enabled=true
+
+- name: Ensure replicaset exists for configsvr
+  vars:
+    replsetname: "{{ inventory_hostname.split('_')[0] }}" 
+    replica_members: |
+      [
+        {% for host in groups[replsetname] %}
+          { "host": "{{ hostvars[host].ansible_host }}:{{ server_port }}" }{% if not loop.last %},{% endif %}
+        {% endfor %}
+      ]
+  community.mongodb.mongodb_replicaset:
+    login_host: "{{ ansible_host }}"
+    login_port: "{{ server_port }}"
+    replica_set: "{{replsetname}}"
+    members:  "{{ replica_members }}"
+  when: inventory_hostname in groups[replsetname][0]

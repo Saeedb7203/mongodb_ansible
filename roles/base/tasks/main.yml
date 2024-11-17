@@ -1,3 +1,44 @@
+# - name: install curl
+#   tags: curl,ubuntu
+#   apt:
+#     name:
+#     - curl
+#     - gnupg
+#     state: latest
+#   when: ansible_distribution == "Ubuntu"
+
+# - name: Curl Package
+#   tags: curl,mongo.ubuntu
+#   shell: curl -fsSL https://www.mongodb.org/static/pgp/server-8.0.asc | gpg --dearmor -o /usr/share/keyrings/mongodb-server-8.0.gpg 
+
+
+# - name: Create the list file
+#   shell: echo "deb [ signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] http://repo.mongodb.org/apt/debian bookworm/mongodb-org/8.0 main" | tee /etc/apt/sources.list.d/mongodb-org-8.0.list
+
+# - name: update repository index (Ubuntu)
+#   tags: always
+#   apt:
+#     update_cache: yes
+#   changed_when: false
+#   when: ansible_distribution == "Ubuntu"
+
+# - name: install mongodb-org
+#   apt:
+#     name: mongodb-org
+
+# - name: start mongo server
+#   service: name=mongod state=started enabled=true daemon_reload=true
+# - name: install pip
+#   apt:
+#     name: pip
+# - name: install pymongo
+#   ansible.builtin.pip:
+#     name: pymongo
+
+################################## Percona MongoDb ########################################
+
+
+
 - name: install curl
   tags: curl,ubuntu
   apt:
@@ -7,13 +48,45 @@
     state: latest
   when: ansible_distribution == "Ubuntu"
 
-- name: Curl Package
-  tags: curl,mongo.ubuntu
-  shell: curl -fsSL https://www.mongodb.org/static/pgp/server-8.0.asc | gpg --dearmor -o /usr/share/keyrings/mongodb-server-8.0.gpg 
+- name: Download the percona-release repository package
+  command: curl -O https://repo.percona.com/apt/percona-release_latest.generic_all.deb
 
 
-- name: Create the list file
-  shell: echo "deb [ signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] http://repo.mongodb.org/apt/debian bookworm/mongodb-org/8.0 main" | tee /etc/apt/sources.list.d/mongodb-org-8.0.list
+
+- name: Install the downloaded repository package and its dependencies using apt
+  command: apt install -y gnupg2 lsb-release ./percona-release_latest.generic_all.deb
+
+
+
+
+- name: update repository index (Ubuntu)
+  tags: always
+  apt:
+    update_cache: yes
+  changed_when: false
+  when: ansible_distribution == "Ubuntu"
+
+
+- name: Fetch percona-release packages from Percona web
+  shell: "wget https://repo.percona.com/apt/percona-release_latest.$(lsb_release -sc)_all.deb"
+
+# - name: Fetch percona-release packages from Percona web
+#   ansible.builtin.get_url:
+#     url: https://repo.percona.com/apt/percona-release_latest.$(lsb_release -sc)_all.deb
+#     dest: /home/saeed/
+
+
+- name: Install the downloaded package with dpkg
+  shell: dpkg -i percona-release_latest.$(lsb_release -sc)_all.deb
+
+
+
+- name: Enable the psmdb repository
+  shell: percona-release enable psmdb-70 release
+
+- name: Enable the pbm repository
+  shell: percona-release enable pbm release
+
 
 - name: update repository index (Ubuntu)
   tags: always
@@ -24,15 +97,17 @@
 
 - name: install mongodb-org
   apt:
-    name: mongodb-org
+    name:
+    - percona-server-mongodb
+    - percona-backup-mongodb
 
 - name: start mongo server
   service: name=mongod state=started enabled=true daemon_reload=true
+- name: restart pbm-agent server
+  service: name=pbm-agent state=started enabled=true
 - name: install pip
   apt:
     name: pip
 - name: install pymongo
   ansible.builtin.pip:
     name: pymongo
-
-

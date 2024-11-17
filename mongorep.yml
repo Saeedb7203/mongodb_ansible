@@ -16,16 +16,16 @@
 ##############Create keyfile and Copy to servers##############
 
 
-# - hosts: workstations
-#   vars_prompt:
-#   - name: "work_pass"
-#     prompt: "Please enter the password for the workstation"
-#     private: yes
-#   tasks:
-#   - name: create keyfile
-#     ansible.builtin.shell: "openssl rand -base64 756 >{{ playbook_dir }}/roles/authentication/files/key"
-#     args:
-#       creates: "{{ playbook_dir }}/roles/authentication/files/key"  
+- hosts: workstations
+  vars_prompt:
+  - name: "work_pass"
+    prompt: "Please enter the password for the workstation"
+    private: yes
+  tasks:
+  - name: create keyfile
+    ansible.builtin.shell: "openssl rand -base64 756 >{{ playbook_dir }}/roles/authentication/files/key"
+    args:
+      creates: "{{ playbook_dir }}/roles/authentication/files/key"  
 
 
 
@@ -61,7 +61,7 @@
       - workstations
   vars_prompt:
   - name: "work_pass"
-    prompt: "Please enter the port for the workstation"
+    prompt: "Please enter the password for the workstation"
     private: yes
   - name: "server_port"
     prompt: "Please enter the port for the Mongo Server"
@@ -84,7 +84,7 @@
       - workstations
   vars_prompt:
   - name: "work_pass"
-    prompt: "Please enter the port for the workstation"
+    prompt: "Please enter the passwor for the workstation"
     private: yes
   - name: "rootuser"
     prompt: "Please enter the rootuser username"

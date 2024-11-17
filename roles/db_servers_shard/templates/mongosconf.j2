@@ -1,8 +1,8 @@
 sharding:
-  configDB: {{confreplsetname}}/{{ bindip }}:{{ server_port }}
+  {{ configDB_connection_string }}
 net:
   bindIp: {{ bindip }}
-  port: {{ mongosport }}
+  port: {{ mongos_port }}
 systemLog:
   destination: file
   path: {{ mongoslog }}

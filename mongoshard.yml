@@ -1,87 +1,63 @@
 ---
 
-# - hosts: all
-#   become: true
-#   pre_tasks:
-
-
-#   - name: update repository index (Ubuntu)
-#     tags: always
-#     apt:
-#       update_cache: yes
-#     changed_when: false
-#     when: ansible_distribution == "Ubuntu"
-
-# - hosts: all
-#   become: true
-#   roles:
-#     - base
-      
-
-- hosts: rs0,rs1
-  become: true
-  roles:
-    - db_servers_repl
-
-- hosts: rs0,rs1
+- hosts: all
   become: true
   pre_tasks:
-  - name: change servermode
-    lineinfile:
-      path: /etc/mongod.conf
-      regexp: '^#sharding:'
-      line: "sharding:"
-  - name: add shard servermode
-    lineinfile:
-      path: /etc/mongod.conf
-      regexp: '^#\s*clusterRole:'
-      line: "  clusterRole: {{ shardmode }}"
-  - name: start mongo server
-    service: name=mongod state=restarted enabled=true  
 
 
-- hosts: rs3
-  become: true
-  roles:
-    - db_servers_shard
-
-- hosts: rs2
-  become: true
-  vars_prompt:
-  - name: "mongos_port"
-    prompt: "Please enter the port for the Mongo Server"
-    private: no
-    default: 27017
-  pre_tasks:
-  - name: create user for mongos
-    community.mongodb.mongodb_shell:
-      login_host: "{{ ansible_host }}"
-      login_port: "{{ mongosport }}"
-      db: "admin"
-      eval: "db.createUser( { user: \"root\", pwd: \"saeed\", roles: [ { role: \"root\", db: \"admin\" }] } )"
-
-  - name: enable security for mongos
-    lineinfile:
-      path: /etc/mongod.conf
-      regexp: '^#security:'
-      line: "security:"
-
-
-  - name: change authorization mode
-    lineinfile:
-      path: /etc/mongod.conf
-      regexp: '^#\s*authorization: \"disabled\"'
-      line: "  authorization: \"enabled\""
-
-  - name: add key in mongos config
-    lineinfile:
-      path: /etc/mongod.conf
-      regexp: '^#\s*keyFile: /var/lib/mongodb/keyfile'
-      line: "  keyFile: /var/lib/mongodb/keyfile"
-  - name: restart mongos
-    service: name=mongos state=restarted enabled=true    
+  - name: update repository index (Ubuntu)
+    tags: always
+    apt:
+      update_cache: yes
+    changed_when: false
+    when: ansible_distribution == "Ubuntu"
 
 - hosts: all
   become: true
   roles:
-    - authentication
+    - base
+      
+
+- hosts: all
+  become: true
+  gather_facts: yes
+  vars_prompt:
+  - name: "work_pass"
+    prompt: "Please enter the password for the workstation"
+    private: yes
+  - name: "shardsvr_port"
+    prompt: "Please enter the port for the shardsvr Mongo Server"
+    private: no
+    default: 27017
+  - name: "configsvr_port"
+    prompt: "Please enter the port for the confsvr Mongo Server"
+    private: no
+    default: 27018
+  - name: "confsvr"
+    prompt: "Please enter group name for confsvr"
+    private: no
+    default: shardsvr
+  vars:
+    exclude_groups:
+      - workstations
+      - "{{confsvr}}"
+    target_group: "{{confsvr}}"  # Specify the group to target
+  tasks:
+  - name: run create replica in shard servers
+    vars:
+      server_port: "{{shardsvr_port}}"
+    include_role:
+      name: db_servers_shard
+      tasks_from: shardsvr
+    when: exclude_groups | intersect(group_names) | length == 0
+  - name: run create replica in config servers
+    vars:
+      server_port: "{{configsvr_port}}"
+      exclude_groups:
+        - workstations
+        - "{{confsvr}}"
+      target_group: "{{confsvr}}"  # Specify the group to target
+    include_role:
+      name: db_servers_shard
+      tasks_from: configsvr
+    when: inventory_hostname in groups[target_group]

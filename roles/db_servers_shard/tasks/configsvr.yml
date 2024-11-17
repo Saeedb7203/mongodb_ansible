@@ -1,0 +1,110 @@
+- name: configuration mongo
+  tags: mongo,auth,key
+  template:
+    src: config.j2
+    dest: /etc/mongod.conf
+
+
+
+- name: change servermode
+  lineinfile:
+    path: /etc/mongod.conf
+    regexp: '^#sharding:'
+    line: "sharding:"
+
+- name: add configsvr to confsvr node
+  lineinfile:
+    path: /etc/mongod.conf
+    regexp: '^#\s*clusterRole:'
+    line: "  clusterRole: configsvr"
+
+
+- name: change port
+  lineinfile:
+    path: /etc/mongod.conf
+    regexp: '^#\s*port: 27017'
+    line: "  port: {{configsvr_port}}"
+  when: inventory_hostname in groups[target_group]
+############Start Mongo server##########
+
+
+- name: start mongo server
+  service: name=mongod state=restarted enabled=true
+
+- name: Ensure replicaset exists for configsvr
+  vars:
+    replsetname: "{{ inventory_hostname.split('_')[0] }}" 
+    replica_members: |
+      [
+        {% for host in groups[replsetname] %}
+          { "_id": {{ loop.index0 }}, "host": "{{ hostvars[host].ansible_host }}:{{ server_port }}" }{% if not loop.last %},{% endif %}
+        {% endfor %}
+      ]
+  community.mongodb.mongodb_shell:
+    login_host: "{{ ansible_host }}"
+    login_port: "{{ server_port }}"
+    db: "admin"
+    eval: "rs.initiate( { _id: \"{{replsetname }}\", configsvr:true, members: {{ replica_members }} } )"
+  when: inventory_hostname in groups[target_group]
+  ignore_errors: true
+
+- name: Wait for seconds
+  ansible.builtin.pause:
+    seconds: 3
+
+- name: Generate explicit group and host mapping for 'rs' groups, excluding specified ones
+  set_fact:
+    group_templates: |
+      {% set valid_groups = groups.keys() | select('match', '^rs') | list %}
+      {% set filtered_groups = valid_groups | reject('in', exclude_groups | default([])) | list %}
+      {% for group in filtered_groups %}
+        {% set group_members = groups[group] | map('extract', hostvars, 'ansible_host') | map('regex_replace', '^(.*?)(?::\d+)?$', '\\1:' ~ shardsvr_port) | list %}
+        {{ group }}/{{ group_members | join(',') }}
+      {% endfor %}
+    config_members: |
+      {% set valid_groups = groups.keys() | select('match', '^rs') | list %}
+      {% set filtered_groups = valid_groups | select('in', exclude_groups | default([])) | list %}
+      {% for group in filtered_groups %}
+        {% set group_members = groups[group] | map('extract', hostvars, 'ansible_host') | map('regex_replace', '^(.*?)(?::\d+)?$', '\\1:' ~ configsvr_port) | list %}
+        {{ group }}/{{ group_members | join(',') }}
+      {% endfor %}
+- name: Generate configDB connection string
+  set_fact:
+    configDB_connection_string: "configDB: {{config_members}}"
+
+- name: Print the generated configDB connection string
+  debug:
+    msg: "The generated configDB connection string is: {{ config_members }}"
+
+- name: Print generated group templates
+  debug:
+    msg: "After excluding {{ exclude_groups }}, the group_templates will be: {{ group_templates }}"
+
+- name: configuration mongosrouter
+  tags: mongo,auth,key
+  template:
+    src: mongosconf.j2
+    dest: /etc/mongosrouter.conf
+    
+- name: configuration mongos.service
+  tags: mongo,auth,key
+  template:
+    src: mongos.service.j2
+    dest: /etc/systemd/system/mongos.service
+
+- name: start mongos server
+  service: name=mongos state=started enabled=true daemon_reload=true
+
+- name: Print each shard connection string from group_templates
+  debug:
+    msg: "{{ item }}"
+  loop: "{{ group_templates.splitlines() }}"
+
+
+- name: Add each shard to the MongoDB cluster
+  community.mongodb.mongodb_shard:
+    login_host: "{{ ansible_host }}"
+    login_port: "{{ mongos_port }}"
+    shard: "{{ item | trim}}"
+  loop: "{{ group_templates.splitlines() }}"
+  when: group_templates | length > 0 

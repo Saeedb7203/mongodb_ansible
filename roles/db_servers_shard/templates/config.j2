@@ -26,9 +26,10 @@ net:
 
 # how the process runs
 processManagement:
-  timeZoneInfo: /usr/share/zoneinfo
+  fork: true
+  pidFilePath: /var/run/mongod.pid
 
-
+#security:
 #security:
 #  authorization: "disabled"
 #  keyFile: /var/lib/mongodb/keyfile
@@ -36,7 +37,7 @@ processManagement:
 #operationProfiling:
 
 replication:
-  replSetName: {{ confreplsetname }}
+  replSetName: {{ replsetname }}
 
 #sharding:
 #  clusterRole:

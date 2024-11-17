@@ -1,9 +1,17 @@
 replsetname:  "{{ inventory_hostname.split('_')[0] }}"
 bindip: "{{ ansible_facts['default_ipv4']['address'] }}"
-# server_port: 27017
+server_port: 27017
+mongos_port: 27019
 dbpath: /var/lib/mongodb
 logpath: /var/log/mongodb/mongod.log
+mongoslog: /var/log/mongodb/mongos.log
 shardmode: shardsvr
 root_user_pass: saeed
 superuser_pass: saeed
 authenticationMechanisms: SCRAM-SHA-256
+backup_path: /data/backup     # set for local backup
+region: us                    # set for s3
+bucket:                       # set s3 bucket
+prefix:                       # set s3 prefix
+access_key:                   # set s3 access key
+secret_key:                   # set s3 secret key

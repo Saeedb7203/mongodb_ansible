@@ -1,17 +1,19 @@
 [rs0]
-rs0_0 ansible_host=172.16.2.135
-rs0_1 ansible_host=172.16.2.136
-rs0_2 ansible_host=172.16.2.137
+rs0_0 ansible_host=172.16.2.158
+rs0_1 ansible_host=172.16.2.159
+rs0_2 ansible_host=172.16.2.160
 
 
 [rs1]
-rs1_0 ansible_host=172.16.2.139
-rs1_1 ansible_host=172.16.2.140
-rs1_2 ansible_host=172.16.2.141
+rs1_0 ansible_host=172.16.2.161
+rs1_1 ansible_host=172.16.2.162
+rs1_2 ansible_host=172.16.2.163
 
 
 [rs2]
-rs2_0 ansible_host=172.16.2.142
+rs2_0 ansible_host=172.16.2.164
+rs2_1 ansible_host=172.16.2.165
+rs2_2 ansible_host=172.16.2.166
 
 
 [workstations]

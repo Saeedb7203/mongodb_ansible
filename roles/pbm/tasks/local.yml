@@ -1,0 +1,60 @@
+- name: Create the role that allows any action on any resource.
+  community.mongodb.mongodb_shell:
+    login_host: "{{ ansible_host }}"
+    login_port: "{{ server_port }}"
+    login_user: "{{rootuser}}"
+    login_password: "{{rootpass}}"
+    db: "admin"
+    eval: "db.createRole({ \"role\": \"pbmAnyAction\",\"privileges\": [{ \"resource\": { \"anyResource\": true },\"actions\": [ \"anyAction\" ]}],\"roles\": []})"
+  ignore_errors: yes
+
+
+- name: Create the user and assign the role you created to it.
+  community.mongodb.mongodb_shell:
+    login_host: "{{ ansible_host }}"
+    login_port: "{{ server_port }}"
+    login_user: "{{rootuser}}"
+    login_password: "{{rootpass}}"
+    db: "admin"
+    eval: "db.createUser({user: \"{{pbmuser}}\",\"pwd\": \"{{pbmpass}}\",\"roles\" : [{ \"db\":\"admin\", \"role\":\"readWrite\",\"collection\":\"\" },{ \"db\":\"admin\", \"role\":\"backup\" },{ \"db\":\"admin\", \"role\":\"clusterMonitor\" },{ \"db\":\"admin\", \"role\":\"restore\" },{ \"db\":\"admin\", \"role\":\"pbmAnyAction\" }]})"
+  ignore_errors: yes
+
+
+- name: Ensure datapath directory exists for local backup
+  ansible.builtin.file:
+    path: "{{ backup_path }}"
+    state: directory
+    owner: mongod
+    group: mongod
+    # force: yes
+
+- name: Create pbm config for local storage
+  template:
+    src: pbm_storage_local.j2
+    dest: /etc/pbm-storage.conf
+
+- name: Edit the environment file /etc/default/pbm-agent
+  template:
+    src: pbm_agent_vars.j2
+    dest:  /etc/default/pbm-agent
+- name: Add PBM_MONGODB_URI to /etc/environment
+  lineinfile:
+    path: /etc/environment
+    line: 'PBM_MONGODB_URI="mongodb://{{pbmuser}}:{{pbmpass}}@{{ ansible_host }}:{{server_port}}/?authSource=admin&replSetName={{ replsetname }}"'
+    state: present
+- name: Add PBM_MONGODB_URI to user's .bashrc
+  lineinfile:
+    path: /home/{{ target_user }}/.bashrc
+    line: 'export PBM_MONGODB_URI="mongodb://{{pbmuser}}:{{pbmpass}}@{{ ansible_host }}:{{server_port}}/?authSource=admin&replSetName={{ replsetname }}"'
+    state: present
+    create: yes
+
+- name: Add PBM_MONGODB_URI to user's .profile
+  lineinfile:
+    path: /home/{{ target_user }}/.profile
+    line: 'export PBM_MONGODB_URI="mongodb://{{pbmuser}}:{{pbmpass}}@{{ ansible_host }}:{{server_port}}/?authSource=admin&replSetName={{ replsetname }}"'
+    state: present
+    create: yes
+
+  # args:
+  #   executable: /bin/bash

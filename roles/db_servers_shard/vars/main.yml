@@ -1,0 +1,1 @@
+shard_groups: "{{ groups.keys() | select('match', '^rs.*') | list }}"  # Groups starting with 'rs'

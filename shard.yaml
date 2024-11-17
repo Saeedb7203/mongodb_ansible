@@ -1,0 +1,6 @@
+---
+- name: Install Shard Mongodb server 
+  hosts: all
+  become: yes
+  roles:
+  - db_servers_shard

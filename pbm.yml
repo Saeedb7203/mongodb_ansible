@@ -1,0 +1,64 @@
+- hosts: all
+  become: true
+  vars:
+    exclude_groups:
+      - workstations
+    # Map chosen storage configuration for pbm
+    config_file_path: "{{ playbook_dir }}/roles/pbm/templates/{% if config_choice == '1' %}pbm_storage_s3.j2{% else %}pbm_storage_local.j2{% endif %}"
+
+  vars_prompt:
+  - name: "server_port"
+    prompt: "Please enter server port"
+    private: no 
+    default: 27017
+  - name: "rootuser"
+    prompt: "Please enter the rootuser username"
+    private: no 
+    default: root
+  - name: "rootpass"
+    prompt: "Please enter the rootuser password"
+    private: yes 
+    default: rootpass
+  - name: "pbmuser"
+    prompt: "Please enter the pbmuser username"
+    private: no 
+    default: pbmuser
+  - name: "pbmpass"
+    prompt: "Please enter the pbmuser password"
+    private: yes 
+    default: pbmpassword
+  - name: "config_choice"
+    prompt: "Choose MongoDB configuration (enter 1 for s3 or 2 for local storage):"
+    private: no
+  tasks:
+    - name: set pbm s3 storage configs
+      include_role:
+        name: pbm
+        tasks_from: s3
+      when: "exclude_groups | intersect(group_names) | length == 0 and config_choice == '1' "
+
+    - name: set pbm local storage configs
+      include_role:
+        name: pbm
+        tasks_from: local
+      when: "exclude_groups | intersect(group_names) | length == 0 and config_choice == '2' "
+    - name: Add PBM_MONGODB_URI to user's .bashrc
+      lineinfile:
+        path: .bashrc
+        line: 'export PBM_MONGODB_URI="mongodb://{{pbmuser}}:{{pbmpass}}@{{ ansible_host }}:{{server_port}}/?authSource=admin&replSetName={{ replsetname }}"'
+        state: present
+        create: yes
+
+    - name: Add PBM_MONGODB_URI to user's .profile
+      lineinfile:
+        path: .profile
+        line: 'export PBM_MONGODB_URI="mongodb://{{pbmuser}}:{{pbmpass}}@{{ ansible_host }}:{{server_port}}/?authSource=admin&replSetName={{ replsetname }}"'
+        state: present
+        create: yes
+    # - name: Set the MongoDB URI connection string for pbm
+    #   shell: export PBM_MONGODB_URI="mongodb://{{pbmuser}}:{{pbmpass}}@{{ ansible_host }}:{{server_port}}/?authSource=admin&replSetName={{ replsetname }}"
+    - name: set pbm config
+      shell: pbm config --file "/etc/pbm-storage.conf"
+    - name: restart pbm-agent server
+      service: name=pbm-agent state=restarted enabled=true
+

@@ -1,6 +1,0 @@
-- name: configuration mongodump
-  tags: mongo,backup,dump
-  template:
-    src: mongodump.j2
-    dest: mongodump.sh
-    mode: +x
